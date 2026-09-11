@@ -1,0 +1,36 @@
+{
+  "name": "delivery-mhs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "lucide-react": "^0.577.0",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11",
+    "react-hook-form": "^7.71.2",
+    "@hookform/resolvers": "^5.2.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.2.1",
+    "@tailwindcss/postcss": "^4.2.1",
+    "eslint": "^9.39.3",
+    "eslint-config-next": "16.3.5",
+    "vitest": "^4.0.18",
+    "@playwright/test": "^1.58.2"
+  }
+}
