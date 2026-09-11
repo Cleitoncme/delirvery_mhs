@@ -1,0 +1,2 @@
+import { notFound } from "next/navigation";
+export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; if(slug !== "mhs-mercado") notFound(); return <main id="main" className="container empty"><span className="eyebrow">MHS • SOLUÇÕES EM AUTOMAÇÃO COMERCIAL</span><h1>Seu mercado,<br/>perto de você.</h1><p>A base do seu novo delivery está pronta.</p></main>; }
