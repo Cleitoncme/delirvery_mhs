@@ -12,24 +12,26 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react";
-import { catalogService } from "@/services/catalog";
 import { normalize } from "@/lib/format";
 import { ProductCard } from "@/components/delivery/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { Tenant } from "@/types/domain";
+import type { Category, Product, Tenant } from "@/types/domain";
 import { useHydrated } from "@/lib/use-hydrated";
 export function CatalogView({
   tenant,
+  categories,
+  products,
   categoryId,
 }: {
   tenant: Tenant;
+  categories: Category[];
+  products: Product[];
   categoryId?: string;
 }) {
   const [search, setSearch] = useState("");
   const [sub, setSub] = useState("Todos");
   const hydrated = useHydrated();
-  const categories = catalogService.getCategories(tenant.id);
-  const all = catalogService.getProducts(tenant.id);
+  const all = products;
   const category = categories.find((c) => c.id === categoryId);
   const categoryProducts =
     categoryId && categoryId !== "destaques"
@@ -118,7 +120,7 @@ export function CatalogView({
           return (
             <Link
               key={c.id}
-              href={`/loja/${tenant.slug}/categoria/${c.id}`}
+              href={`/loja/${tenant.slug}/categoria/${c.slug}`}
               className={categoryId === c.id ? "selected" : ""}
             >
               <Icon size={21} />
@@ -158,7 +160,12 @@ export function CatalogView({
         {results.length ? (
           <div className="product-grid">
             {results.map((p) => (
-              <ProductCard key={p.id} product={p} slug={tenant.slug} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                slug={tenant.slug}
+                isOpen={tenant.isOpen}
+              />
             ))}
           </div>
         ) : (

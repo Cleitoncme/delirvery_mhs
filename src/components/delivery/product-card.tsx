@@ -6,18 +6,18 @@ import { money } from "@/lib/format";
 import type { Product } from "@/types/domain";
 import { useCart } from "@/features/cart/store";
 import { useHydrated } from "@/lib/use-hydrated";
-import { catalogService } from "@/services/catalog";
 export function ProductCard({
   product,
   slug,
+  isOpen,
 }: {
   product: Product;
   slug: string;
+  isOpen: boolean;
 }) {
   const add = useCart((s) => s.add);
   const hydrated = useHydrated();
-  const href = `/loja/${slug}/produto/${product.id}`;
-  const open = catalogService.getTenant(slug)?.isOpen;
+  const href = `/loja/${slug}/produto/${product.slug}`;
   return (
     <article className="product-card">
       <Link href={href}>
@@ -50,7 +50,7 @@ export function ProductCard({
           ) : (
             <button
               className="add-icon"
-              disabled={!hydrated || !product.available || !open}
+              disabled={!hydrated || !product.available || !isOpen}
               aria-label={`Adicionar ${product.name}`}
               onClick={() =>
                 add(product.tenantId, {

@@ -39,11 +39,6 @@ const addressSchema = z.object({
   reference: z.string().trim().max(160),
 });
 type Errors = Record<string, string>;
-function demoOrderNumber() {
-  return String(
-    10000 + Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] % 90000),
-  );
-}
 export function CheckoutView({ tenant }: { tenant: Tenant }) {
   const router = useRouter();
   const lines = useCart((s) => s.carts[tenant.id] ?? []);
@@ -56,6 +51,9 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
   const [payment, setPayment] = useState<PaymentMethod>("PIX");
   const [errors, setErrors] = useState<Errors>({});
   const [showConfirm, setShowConfirm] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>();
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [customer, setCustomer] = useState({ name: "", phone: "", email: "" });
   const [address, setAddress] = useState({
     street: "",
@@ -101,42 +99,93 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
     return !Object.keys(next).length;
   }
   function submit() {
-    if (validate()) setShowConfirm(true);
+    if (!validate()) return;
+    setSubmitError("");
+    setIdempotencyKey(crypto.randomUUID());
+    setShowConfirm(true);
   }
-  function confirm() {
-    const id = `demo-${crypto.randomUUID()}`;
-    const now = new Date().toISOString();
-    create({
-      id,
-      tenantId: tenant.id,
-      number: demoOrderNumber(),
-      customer: {
-        id: `customer-${crypto.randomUUID()}`,
-        name: customer.name.trim(),
-        phone: customer.phone,
-        email: customer.email || undefined,
-      },
-      items,
-      address:
-        fulfillment === "DELIVERY" ? addressSchema.parse(address) : undefined,
-      fulfillmentType: fulfillment,
-      paymentMethod: payment,
-      changeFor:
+  async function confirm() {
+    if (!idempotencyKey || submitting) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const deliveryAddress =
+        fulfillment === "DELIVERY" ? addressSchema.parse(address) : undefined;
+      const changeForCents =
         payment === "CASH" && changeFor
           ? Math.round(Number(changeFor.replace(",", ".")) * 100)
-          : undefined,
-      notes,
-      subtotal,
-      deliveryFee: fee,
-      discount: 0,
-      total: subtotal + fee,
-      status: "NEW",
-      createdAt: now,
-      history: [{ status: "NEW", at: now }],
-    });
-    const order = useOrders.getState().orders[0];
-    clear(tenant.id);
-    router.push(`/loja/${tenant.slug}/pedido/${order.id}/sucesso`);
+          : undefined;
+      const response = await fetch(
+        `/api/v1/lojas/${encodeURIComponent(tenant.slug)}/pedidos`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({
+            customer: {
+              name: customer.name.trim(),
+              phone: customer.phone.trim(),
+              email: customer.email.trim() || undefined,
+            },
+            address: deliveryAddress,
+            fulfillment,
+            payment,
+            changeForCents,
+            notes,
+            items: items.map(({ productId, quantity, optionIds }) => ({
+              productId,
+              quantity,
+              optionIds,
+            })),
+          }),
+        },
+      );
+      const result = (await response.json().catch(() => null)) as
+        | { id?: string; number?: string; total?: number; error?: string }
+        | null;
+      if (
+        !response.ok ||
+        !result?.id ||
+        !result.number ||
+        typeof result.total !== "number"
+      )
+        throw new Error(result?.error ?? "Não foi possível registrar o pedido.");
+      const now = new Date().toISOString();
+      create({
+        id: result.id,
+        tenantId: tenant.id,
+        number: result.number,
+        customer: {
+          id: `customer-${crypto.randomUUID()}`,
+          name: customer.name.trim(),
+          phone: customer.phone.trim(),
+          email: customer.email.trim() || undefined,
+        },
+        items,
+        address: deliveryAddress,
+        fulfillmentType: fulfillment,
+        paymentMethod: payment,
+        changeFor: changeForCents,
+        notes,
+        subtotal,
+        deliveryFee: Math.max(0, result.total - subtotal),
+        discount: 0,
+        total: result.total,
+        status: "NEW",
+        createdAt: now,
+        history: [{ status: "NEW", at: now }],
+      });
+      clear(tenant.id);
+      router.push(`/loja/${tenant.slug}/pedido/${result.id}/sucesso`);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Não foi possível registrar o pedido.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
   return (
     <>
@@ -152,7 +201,8 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
         </div>
       </div>
       <p className="demo-notice">
-        Demonstração: não informe dados reais. Nenhuma cobrança será criada.
+        Ambiente local: pagamentos são simulados e os pedidos ficam no banco de
+        demonstração.
       </p>
       <div className="checkout-grid">
         <form
@@ -319,8 +369,8 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
         </form>
         <CartSummary subtotal={subtotal} fee={fee}>
           <p className="hint">
-            Os valores são demonstrativos e serão recalculados no servidor
-            quando houver API.
+            Os valores finais são recalculados pela API antes de o pedido ser
+            registrado.
           </p>
         </CartSummary>
       </div>
@@ -350,18 +400,25 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
             </p>
             <strong className="confirm-total">{money(subtotal + fee)}</strong>
             <p className="demo-notice">
-              Ao confirmar, um pedido fictício será criado somente nesta sessão.
+              Ao confirmar, o pedido será registrado no ambiente local. Nenhuma
+              cobrança será criada.
             </p>
+            {submitError && (
+              <p className="field-error" role="alert">
+                {submitError}
+              </p>
+            )}
             <div className="modal-actions">
               <button
                 type="button"
                 className="secondary-button"
+                disabled={submitting}
                 onClick={() => setShowConfirm(false)}
               >
                 Voltar
               </button>
-              <button type="button" onClick={confirm}>
-                Confirmar pedido
+              <button type="button" disabled={submitting} onClick={confirm}>
+                {submitting ? "Enviando pedido…" : "Confirmar pedido"}
               </button>
             </div>
           </section>

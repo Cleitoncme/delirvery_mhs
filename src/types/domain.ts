@@ -30,6 +30,7 @@ export interface ProductOptionGroup {
 }
 export interface Product {
   id: string;
+  slug: string;
   tenantId: string;
   externalId?: string;
   categoryId: string;
@@ -44,6 +45,12 @@ export interface Product {
   illustration: string;
   configurable?: boolean;
   optionGroups?: ProductOptionGroup[];
+}
+
+export interface CatalogSnapshot {
+  tenant: Tenant;
+  categories: Category[];
+  products: Product[];
 }
 export interface CartLine {
   productId: string;

@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { priceLine, readCart } from "./rules";
+import { categories, products, tenant } from "@/mocks/catalog";
+import { catalogService } from "@/services/catalog";
 describe("fronteira do carrinho", () => {
   const line = { productId: "coca-cola-2l", quantity: 2, optionIds: [] };
+  beforeEach(() => {
+    catalogService.setCatalog({ tenant, categories, products });
+  });
   it("recalcula centavos e rejeita preços injetados", () => {
     expect(priceLine("mhs", line).total).toBe(2580);
     expect(() => priceLine("mhs", { ...line, unitPrice: 1 })).toThrow();

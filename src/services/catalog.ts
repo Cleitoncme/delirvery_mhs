@@ -1,10 +1,19 @@
-import { categories, products, tenant } from "@/mocks/catalog";
+import type { CatalogSnapshot, Product } from "@/types/domain";
+
+let snapshot: CatalogSnapshot | undefined;
+
 export const catalogService = {
-  getTenant: (slug: string) => (slug === tenant.slug ? tenant : undefined),
+  setCatalog: (catalog: CatalogSnapshot) => {
+    snapshot = catalog;
+  },
+  getTenant: (slug: string) =>
+    snapshot?.tenant.slug === slug ? snapshot.tenant : undefined,
   getCategories: (tenantId: string) =>
-    categories.filter((c) => c.tenantId === tenantId),
+    snapshot?.tenant.id === tenantId ? snapshot.categories : [],
   getProducts: (tenantId: string) =>
-    products.filter((p) => p.tenantId === tenantId),
-  getProduct: (tenantId: string, id: string) =>
-    products.find((p) => p.tenantId === tenantId && p.id === id),
+    snapshot?.tenant.id === tenantId ? snapshot.products : [],
+  getProduct: (tenantId: string, id: string): Product | undefined =>
+    snapshot?.tenant.id === tenantId
+      ? snapshot.products.find((product) => product.id === id)
+      : undefined,
 };

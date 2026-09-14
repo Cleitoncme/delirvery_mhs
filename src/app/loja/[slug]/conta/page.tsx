@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { catalogService } from "@/services/catalog";
+import { getCatalog } from "@/services/catalog-db";
 import { AccountView } from "@/features/account/account-view";
 export default async function AccountPage({
   params,
@@ -7,7 +7,7 @@ export default async function AccountPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const tenant = catalogService.getTenant(slug);
-  if (!tenant) notFound();
-  return <AccountView tenant={tenant} />;
+  const catalog = await getCatalog(slug);
+  if (!catalog) notFound();
+  return <AccountView tenant={catalog.tenant} />;
 }
