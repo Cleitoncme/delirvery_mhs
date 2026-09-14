@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-test("checkout valida dados e cria pedido demonstrativo", async ({ page }) => {
+test("checkout valida dados e cria pedido pela API", async ({ page }) => {
   await page.goto("/");
   await page
     .getByRole("button", { name: "Adicionar Coca-Cola 2L", exact: true })
@@ -19,5 +19,5 @@ test("checkout valida dados e cria pedido demonstrativo", async ({ page }) => {
     page.getByRole("heading", { name: "Confirme seu pedido" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Confirmar pedido" }).click();
-  await expect(page).toHaveURL(/\/pedido\/demo-.*\/sucesso$/);
+  await expect(page).toHaveURL(/\/pedido\/[0-9a-f-]+\/sucesso$/);
 });

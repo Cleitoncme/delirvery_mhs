@@ -10,16 +10,20 @@ import {
   UserRound,
   ArrowUpRight,
 } from "lucide-react";
-import type { Tenant } from "@/types/domain";
+import type { CatalogSnapshot, Tenant } from "@/types/domain";
 import { useEffect } from "react";
 import { useCart } from "@/features/cart/store";
+import { catalogService } from "@/services/catalog";
 export function StoreShell({
   tenant,
+  catalog,
   children,
 }: {
   tenant: Tenant;
+  catalog: CatalogSnapshot;
   children: React.ReactNode;
 }) {
+  catalogService.setCatalog(catalog);
   const path = usePathname();
   const base = `/loja/${tenant.slug}`;
   const count = useCart((s) =>
@@ -43,7 +47,7 @@ export function StoreShell({
   return (
     <>
       <div className="demo-bar">
-        Ambiente de demonstração • pedidos e pagamentos simulados
+        Ambiente local de demonstração • pagamentos simulados
       </div>
       <header className="store-header">
         <div className="container header-inner">

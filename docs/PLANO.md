@@ -1,6 +1,6 @@
 # Delivery MHS — plano e revisão
 
-Escopo autorizado: implementar o protótipo da especificação fornecida, com revisão e segurança prioritária. Sem API real, banco, cobrança, envio de mensagens ou publicação.
+Escopo autorizado: implementar o protótipo da especificação fornecida, com revisão e segurança prioritária. Sem cobrança, envio de mensagens ou publicação.
 
 Branches encadeadas, cada uma baseada na fase anterior:
 
@@ -12,17 +12,18 @@ Branches encadeadas, cada uma baseada na fase anterior:
 6. `etapa/06-admin`: painel demonstrativo, Kanban, transições e validação integrada.
 7. `etapa/07-api-postgres`: PostgreSQL local via Docker, schema multi-tenant e seed do catálogo demonstrativo.
 8. `etapa/08-api-postgres`: conexão server-side, health check, catálogo público e criação idempotente de pedidos.
+9. `etapa/09-cliente-api`: telas públicas carregadas do PostgreSQL e checkout integrado à criação segura de pedidos.
 
 Cada branch preserva um checkpoint. Não fazer merge em develop nem push sem necessidade. Para revisar, comparar cada branch com sua antecessora.
 
-O banco possui schema e dados de demonstração. A API lê e grava no PostgreSQL, mas as telas continuam usando o catálogo mock até uma etapa específica de migração do cliente para esses endpoints.
+O banco possui schema e dados de demonstração. As páginas server-side carregam o catálogo diretamente do PostgreSQL e o checkout envia o pedido à API. Os mocks restantes servem apenas de fixture para testes unitários.
 
 ## Correções à especificação
 
 - Dinheiro em centavos inteiros, incluindo complementos. No exemplo original, 12,90 + 28,90 + 2 × 4,99 = 51,78: são quatro unidades e três linhas; distinguir os dois contadores.
 - Categorias, produtos, carrinhos e pedidos devem carregar tenantId; resolução de tenant deve rejeitar slugs desconhecidos.
 - Persistir somente IDs, quantidades e opções do carrinho; nunca cliente, endereço, telefone, token ou valores confiados do navegador.
-- Preços são recalculados a partir do catálogo mock. Em produção isso deve ocorrer no servidor, com estoque, horário, taxas, idempotência e autorização.
+- Preços são recalculados no servidor, com estoque, horário, taxas e idempotência. Produção ainda requer autenticação e autorização.
 - Identificar por telefone não autentica. Conta e painel são demonstrações sem identidade verificada. Nenhuma informação real deve ser inserida.
 - PIX é somente uma opção simulada; não gerar cobrança ou indicar pagamento confirmado.
 - Pedidos em memória se perdem ao recarregar. IDs aleatórios não substituem autorização.

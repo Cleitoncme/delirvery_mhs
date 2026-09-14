@@ -168,4 +168,4 @@ export const products: Product[] = [
       },
     ],
   },
-].map((p) => ({ tenantId: "mhs", available: true, ...p }));
+].map((p) => ({ tenantId: "mhs", available: true, slug: p.id, ...p }));

@@ -3,7 +3,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { cartKey, priceLine, readCart } from "./rules";
 import type { CartLine } from "@/types/domain";
-import { tenant } from "@/mocks/catalog";
 interface CartState {
   carts: Record<string, CartLine[]>;
   message: string;
@@ -110,9 +109,12 @@ export const useCart = create<CartState>()(
         const value = persisted as { carts?: Record<string, unknown> } | null;
         return {
           ...current,
-          carts: {
-            [tenant.id]: readCart(tenant.id, value?.carts?.[tenant.id]),
-          },
+          carts: Object.fromEntries(
+            Object.entries(value?.carts ?? {}).map(([tenantId, lines]) => [
+              tenantId,
+              readCart(tenantId, lines),
+            ]),
+          ),
         };
       },
     },
