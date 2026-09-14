@@ -1,2 +1,4 @@
 import { AdminView } from "@/features/admin/admin-view";
-export default function AdminPage(){return <AdminView/>;}
+export default function AdminPage() {
+  return <AdminView />;
+}

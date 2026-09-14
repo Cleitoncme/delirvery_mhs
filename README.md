@@ -9,6 +9,8 @@ npm run dev
 
 Abrir http://127.0.0.1:3000/loja/mhs-mercado.
 
+Para preparar o banco local, siga [docs/BANCO_LOCAL.md](docs/BANCO_LOCAL.md).
+
 ```sh
 npm run typecheck
 npm run lint
