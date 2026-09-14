@@ -11,10 +11,11 @@ Branches encadeadas, cada uma baseada na fase anterior:
 5. `etapa/05-pedidos-conta`: sucesso, acompanhamento e conta em memória.
 6. `etapa/06-admin`: painel demonstrativo, Kanban, transições e validação integrada.
 7. `etapa/07-api-postgres`: PostgreSQL local via Docker, schema multi-tenant e seed do catálogo demonstrativo.
+8. `etapa/08-api-postgres`: conexão server-side, health check, catálogo público e criação idempotente de pedidos.
 
 Cada branch preserva um checkpoint. Não fazer merge em develop nem push sem necessidade. Para revisar, comparar cada branch com sua antecessora.
 
-O banco desta etapa possui schema e dados de demonstração, mas as telas continuam usando o catálogo mock até a próxima etapa conectar os serviços ao backend. O driver PostgreSQL ainda não foi instalado porque a instalação de dependência foi recusada pelo controle de permissões.
+O banco possui schema e dados de demonstração. A API lê e grava no PostgreSQL, mas as telas continuam usando o catálogo mock até uma etapa específica de migração do cliente para esses endpoints.
 
 ## Correções à especificação
 
