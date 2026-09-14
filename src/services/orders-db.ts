@@ -9,7 +9,10 @@ export const createOrderSchema = z
   .object({
     customer: z.object({
       name: z.string().trim().min(2).max(100),
-      phone: z.string().trim().min(10).max(20),
+      phone: z
+        .string()
+        .trim()
+        .regex(/^[0-9()\s-]{10,20}$/),
       email: z.string().trim().email().max(254).optional(),
     }),
     address: z

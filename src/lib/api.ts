@@ -30,9 +30,16 @@ export function errorResponse(error: unknown) {
   );
 }
 
-export function jsonRequest(request: Request) {
+export async function jsonRequest(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json"))
     throw new ApiError(415, "Use Content-Type: application/json.");
-  return request.json();
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > 65_536)
+    throw new ApiError(413, "Corpo da solicitação é muito grande.");
+  try {
+    return await request.json();
+  } catch {
+    throw new ApiError(400, "JSON inválido.");
+  }
 }
