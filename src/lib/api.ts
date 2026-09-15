@@ -32,14 +32,29 @@ export function errorResponse(error: unknown) {
 
 export async function jsonRequest(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json"))
+  if (contentType.split(";")[0].trim().toLowerCase() !== "application/json")
     throw new ApiError(415, "Use Content-Type: application/json.");
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > 65_536)
     throw new ApiError(413, "Corpo da solicitação é muito grande.");
+  const reader = request.body?.getReader();
+  if (!reader) throw new ApiError(400, "JSON inválido.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
   try {
-    return await request.json();
-  } catch {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 65_536) {
+        await reader.cancel();
+        throw new ApiError(413, "Corpo da solicitação é muito grande.");
+      }
+      chunks.push(value);
+    }
+    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
     throw new ApiError(400, "JSON inválido.");
-  }
+  } finally { reader.releaseLock(); }
 }

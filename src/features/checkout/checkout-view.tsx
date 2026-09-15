@@ -5,7 +5,6 @@ import Link from "next/link";
 import { z } from "zod";
 import { useCart } from "@/features/cart/store";
 import { priceLine } from "@/features/cart/rules";
-import { useOrders } from "@/features/orders/store";
 import { CartSummary } from "@/components/delivery/cart-summary";
 import { money } from "@/lib/format";
 import type { FulfillmentType, PaymentMethod, Tenant } from "@/types/domain";
@@ -44,7 +43,6 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
   const lines = useCart((s) => s.carts[tenant.id] ?? []);
   const notes = useCart((s) => s.notes);
   const clear = useCart((s) => s.clear);
-  const create = useOrders((s) => s.create);
   const items = lines.map((line) => priceLine(tenant.id, line));
   const subtotal = items.reduce((s, i) => s + i.total, 0);
   const [fulfillment, setFulfillment] = useState<FulfillmentType>("DELIVERY");
@@ -152,31 +150,6 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
         typeof result.total !== "number"
       )
         throw new Error(result?.error ?? "Não foi possível registrar o pedido.");
-      const now = new Date().toISOString();
-      create({
-        id: result.id,
-        tenantId: tenant.id,
-        number: result.number,
-        customer: {
-          id: `customer-${crypto.randomUUID()}`,
-          name: customer.name.trim(),
-          phone: customer.phone.trim(),
-          email: customer.email.trim() || undefined,
-        },
-        items,
-        address: deliveryAddress,
-        fulfillmentType: fulfillment,
-        paymentMethod: payment,
-        changeFor: changeForCents,
-        notes,
-        subtotal,
-        deliveryFee: Math.max(0, result.total - subtotal),
-        discount: 0,
-        total: result.total,
-        status: "NEW",
-        createdAt: now,
-        history: [{ status: "NEW", at: now }],
-      });
       clear(tenant.id);
       router.push(`/loja/${tenant.slug}/pedido/${result.id}/sucesso`);
     } catch (error) {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ApiError, errorResponse, jsonRequest } from "@/lib/api";
 import { createOrder, createOrderSchema } from "@/services/orders-db";
+import { grantOrderAccess } from "@/services/order-reader";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const slugSchema = z
@@ -27,6 +28,7 @@ export async function POST(
       idempotencyKey.data,
       createOrderSchema.parse(await jsonRequest(request)),
     );
+    await grantOrderAccess(slug, order.id, idempotencyKey.data);
     return Response.json(order, {
       status: order.repeated ? 200 : 201,
       headers: { "Cache-Control": "no-store" },

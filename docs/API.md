@@ -25,4 +25,19 @@ O corpo inclui `customer`, `fulfillment`, `payment`, `items` e, para entrega, `a
 
 O endpoint não aceita preço, taxa, desconto, estoque ou total enviados pelo cliente. Ele bloqueia os produtos selecionados, valida disponibilidade e complementos, calcula o total no PostgreSQL, grava o histórico `NEW` e cria um evento `ORDER_CREATED` na outbox `integration_events`. A mesma chave retorna o pedido existente, sem criar uma segunda venda.
 
-Ainda não há autenticação de cliente nem administrativo. A API está limitada ao ambiente de desenvolvimento e deve receber autenticação, RBAC, rate limit, proteção contra abuso e worker para a outbox antes de produção.
+A resposta de criação também emite um cookie HttpOnly para acompanhar aquele pedido durante sete dias. A chave de idempotência deve ser tratada como segredo da tentativa de compra: uma repetição com essa chave pode emitir outro acesso ao mesmo pedido.
+
+## Acompanhamento
+
+`GET /api/v1/lojas/[slug]/pedidos/[orderId]` exige o cookie emitido na criação. Retorna totais, itens, modalidade, status e histórico do banco. Não retorna telefone, e-mail ou endereço. Sem acesso válido, pedido de outra loja ou acesso expirado: 404. Cookies e dados não são compartilhados por cache. As telas consultam a cada dez segundos e sobrevivem ao recarregamento no mesmo navegador.
+
+## Administrativo
+
+- `POST /api/admin/session`: JSON `{ "slug": "mhs-mercado", "email": "operador@example.com", "password": "..." }`. Exige Origin igual a APP_ORIGIN. Emite sessão HttpOnly de oito horas; senha incorreta retorna 401 e limite de tentativas, 429.
+- `DELETE /api/admin/session`: revoga sessão e remove cookie. Exige Origin.
+- `GET /api/admin/pedidos?page=0`: até 50 pedidos da loja da sessão, ordenados do mais recente, com `hasMore` e `role`. Sem sessão: 401. Painel desabilitado: 503.
+- `PATCH /api/admin/pedidos/[orderId]/status`: JSON `{ "expectedStatus": "NEW", "status": "PREPARING" }`. Exige sessão OPERATOR e Origin. Perfil VIEWER: 403; pedido de outra loja: 404; estado desatualizado ou transição inválida: 409.
+
+Entrega: NEW → PREPARING → READY → OUT_FOR_DELIVERY → COMPLETED. Retirada: NEW → PREPARING → READY → COMPLETED. Estados terminais não permitem avanço. Eventos ORDER_STATUS_CHANGED ficam na outbox; envio a integrações depende de um worker futuro.
+
+Todas as entradas JSON são limitadas a 64 KiB durante a leitura, mesmo sem Content-Length. Veja [ADMIN_LOCAL.md](ADMIN_LOCAL.md) para configurar o primeiro acesso.

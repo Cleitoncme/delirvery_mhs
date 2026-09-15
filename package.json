@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "admin:create": "node --env-file=.env scripts/create-admin.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

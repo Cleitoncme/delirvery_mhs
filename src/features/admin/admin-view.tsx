@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -15,7 +16,8 @@ import {
   ArrowRight,
   Search,
 } from "lucide-react";
-import { useOrders } from "@/features/orders/store";
+import { useApiResource } from "@/lib/use-api-resource";
+import { nextOrderStatus, orderStatusNames } from "@/lib/order-flow";
 import { money } from "@/lib/format";
 import type { DeliveryOrderStatus, Order } from "@/types/domain";
 const columns: { status: DeliveryOrderStatus; label: string }[] = [
@@ -24,13 +26,8 @@ const columns: { status: DeliveryOrderStatus; label: string }[] = [
   { status: "READY", label: "Prontos" },
   { status: "OUT_FOR_DELIVERY", label: "Em entrega" },
   { status: "COMPLETED", label: "Concluídos" },
+  { status: "CANCELED", label: "Cancelados" },
 ];
-const next: Partial<Record<DeliveryOrderStatus, DeliveryOrderStatus>> = {
-  NEW: "PREPARING",
-  PREPARING: "READY",
-  READY: "OUT_FOR_DELIVERY",
-  OUT_FOR_DELIVERY: "COMPLETED",
-};
 const nav = [
   LayoutDashboard,
   ClipboardList,
@@ -54,9 +51,46 @@ const names = [
   "Integrações",
 ];
 export function AdminView() {
-  const orders = useOrders((s) => s.orders);
-  const transition = useOrders((s) => s.transition);
-  const [selected, setSelected] = useState<Order | null>(null);
+  const router = useRouter();
+  const [page, setPage] = useState(0);
+  const { data, error, refresh } = useApiResource<{
+    orders: Order[];
+    hasMore: boolean;
+    role: string;
+  }>(`/api/admin/pedidos?page=${page}`);
+  const orders = data?.orders ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = orders.find((order) => order.id === selectedId);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const nextStatus =
+    selected && nextOrderStatus(selected.status, selected.fulfillmentType);
+  async function transition() {
+    if (!selected || !nextStatus || busy) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      const response = await fetch(`/api/admin/pedidos/${selected.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expectedStatus: selected.status,
+          status: nextStatus,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error ?? "Falha ao alterar o pedido.");
+      setSelectedId(null);
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error ? cause.message : "Falha de conexão.",
+      );
+    } finally {
+      setBusy(false);
+      refresh();
+    }
+  }
   const [query, setQuery] = useState("");
   const visible = orders.filter((o) =>
     `${o.number} ${o.customer.name}`
@@ -86,26 +120,55 @@ export function AdminView() {
             );
           })}
         </nav>
-        <small>Dados demonstrativos</small>
+        <small>Gestão de pedidos</small>
       </aside>
-      <main className="admin-main">
+      <main id="main" className="admin-main">
         <header>
           <div>
             <span className="eyebrow">PAINEL ADMINISTRATIVO</span>
             <h1>Pedidos</h1>
           </div>
-          <span className="admin-user">MT</span>
+          <button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const response = await fetch("/api/admin/session", {
+                  method: "DELETE",
+                });
+                if (!response.ok)
+                  throw new Error("Não foi possível encerrar a sessão.");
+              router.replace("/admin/login");
+              router.refresh();
+              } catch {
+                setActionError("Não foi possível sair. Tente novamente.");
+                setBusy(false);
+              }
+            }}
+          >
+            Sair
+          </button>
         </header>
         <p className="demo-notice">
-          Acesso demonstrativo: não há autenticação nem dados reais. Produção
-          exige RBAC e isolamento por tenant no servidor.
+          Atualização automática a cada 10 segundos.{" "}
+          {data?.role === "VIEWER"
+            ? "Seu perfil permite somente consulta."
+            : "Selecione um pedido para avançar o atendimento."}
         </p>
+        {(error || actionError) && (
+          <p role="alert" className="field-error">
+            {error || actionError}
+          </p>
+        )}
+        {!data && !error && <p role="status">Carregando pedidos…</p>}
+        <button onClick={refresh}>Atualizar pedidos</button>
+        {data && orders.length === 0 && <p>Nenhum pedido nesta página.</p>}
         <label className="admin-search">
           <Search size={18} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por pedido ou cliente"
+            placeholder="Buscar nesta página por pedido ou cliente"
             aria-label="Buscar pedidos"
           />
         </label>
@@ -122,7 +185,10 @@ export function AdminView() {
                   <button
                     className="order-card"
                     key={order.id}
-                    onClick={() => setSelected(order)}
+                    onClick={() => {
+                      setSelectedId(order.id);
+                      setActionError("");
+                    }}
                   >
                     <strong>#{order.number}</strong>
                     <span>{order.customer.name}</span>
@@ -139,6 +205,27 @@ export function AdminView() {
             );
           })}
         </section>
+        <nav aria-label="Páginas de pedidos">
+          <button
+            disabled={page === 0 || busy}
+            onClick={() => {
+              setPage(page - 1);
+              setSelectedId(null);
+            }}
+          >
+            Anterior
+          </button>
+          <span> Página {page + 1} </span>
+          <button
+            disabled={!data?.hasMore || busy}
+            onClick={() => {
+              setPage(page + 1);
+              setSelectedId(null);
+            }}
+          >
+            Próxima
+          </button>
+        </nav>
       </main>
       {selected && (
         <aside
@@ -150,7 +237,7 @@ export function AdminView() {
           <button
             className="icon-button"
             aria-label="Fechar detalhes"
-            onClick={() => setSelected(null)}
+            onClick={() => setSelectedId(null)}
           >
             <X size={20} />
           </button>
@@ -168,17 +255,23 @@ export function AdminView() {
               ? `${selected.address.street}, ${selected.address.number}`
               : "Retirada na loja"}
           </p>
+          {selected.address && <p>
+            {selected.address.neighborhood} • {selected.address.city}/{selected.address.state}<br />
+            {selected.address.complement} {selected.address.reference}
+          </p>}
           <h3>Itens</h3>
           {selected.items.length ? (
             selected.items.map((item) => (
               <p key={item.id}>
                 {item.quantity}× {item.productName}{" "}
                 <strong>{money(item.total)}</strong>
+                {item.selectedOptions.length > 0 && <small><br />{item.selectedOptions.map(option => option.name).join(", ")}</small>}
               </p>
             ))
           ) : (
-            <p>Itens do pedido demonstrativo inicial.</p>
+            <p>Nenhum item registrado.</p>
           )}
+          {selected.notes && <p><strong>Observações:</strong> {selected.notes}</p>}
           <div className="drawer-total">
             <span>Total</span>
             <strong>{money(selected.total)}</strong>
@@ -191,19 +284,27 @@ export function AdminView() {
                 ? "Dinheiro"
                 : "Cartão na entrega"}
           </p>
-          {next[selected.status] && (
+          {selected.paymentMethod === "CASH" && selected.changeFor != null && <p>Troco para {money(selected.changeFor)}</p>}
+          <h3>Histórico</h3>
+          <ul>
+            {selected.history.map((entry, index) => (
+              <li key={index}>
+                {orderStatusNames[entry.status]} — {new Date(entry.at).toLocaleString("pt-BR")}
+              </li>
+            ))}
+          </ul>
+          {nextStatus && data?.role === "OPERATOR" && (
             <button
               className="wide"
-              onClick={() => {
-                transition(selected.id, next[selected.status]!);
-                setSelected({ ...selected, status: next[selected.status]! });
-              }}
+              disabled={busy || !!error}
+              onClick={transition}
             >
               {selected.status === "NEW"
                 ? "Aceitar pedido"
                 : selected.status === "PREPARING"
                   ? "Marcar como pronto"
-                  : selected.status === "READY"
+                  : selected.status === "READY" &&
+                      selected.fulfillmentType === "DELIVERY"
                     ? "Saiu para entrega"
                     : "Concluir pedido"}
               <ArrowRight size={17} />

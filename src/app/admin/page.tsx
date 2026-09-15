@@ -1,4 +1,7 @@
 import { AdminView } from "@/features/admin/admin-view";
-export default function AdminPage() {
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/admin-auth";
+export default async function AdminPage() {
+  if (!(await getAdminSession())) redirect("/admin/login");
   return <AdminView />;
 }

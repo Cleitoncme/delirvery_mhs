@@ -10,4 +10,6 @@ Na primeira inicialização do volume `postgres_data`, o container executa em or
 
 As migrations são imutáveis. Em ambientes já existentes, novas alterações devem ser um novo arquivo numerado. Para produção, a aplicação deverá executar migrations por um job restrito, sem expor a porta do banco.
 
+A migration `003_admin_sessions.sql` adiciona usuários administrativos, sessões, limite de login, acessos privados de acompanhamento e identificação do operador no histórico. Para aplicar em volume existente e criar o primeiro operador, veja [ADMIN_LOCAL.md](ADMIN_LOCAL.md).
+
 Para parar o container sem apagar dados, execute `npm run db:down`.
