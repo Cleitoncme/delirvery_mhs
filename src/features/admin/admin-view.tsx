@@ -110,7 +110,15 @@ export function AdminView() {
             const Icon = nav[i];
             return (
               <a
-                href={name === "Pedidos" ? "#pedidos" : "#"}
+                href={
+                  name === "Pedidos"
+                    ? "#pedidos"
+                    : name === "Produtos"
+                      ? "/admin/produtos"
+                      : name === "Categorias"
+                        ? "/admin/categorias"
+                        : "#"
+                }
                 className={name === "Pedidos" ? "active" : ""}
                 key={name}
               >
@@ -123,6 +131,11 @@ export function AdminView() {
         <small>Gestão de pedidos</small>
       </aside>
       <main id="main" className="admin-main">
+        <nav className="catalog-actions" aria-label="Catálogo administrativo">
+          <Link href="/admin/produtos">Produtos</Link>
+          <Link href="/admin/categorias">Categorias</Link>
+          <Link href="/admin/complementos">Complementos</Link>
+        </nav>
         <header>
           <div>
             <span className="eyebrow">PAINEL ADMINISTRATIVO</span>
@@ -138,8 +151,8 @@ export function AdminView() {
                 });
                 if (!response.ok)
                   throw new Error("Não foi possível encerrar a sessão.");
-              router.replace("/admin/login");
-              router.refresh();
+                router.replace("/admin/login");
+                router.refresh();
               } catch {
                 setActionError("Não foi possível sair. Tente novamente.");
                 setBusy(false);
@@ -255,23 +268,38 @@ export function AdminView() {
               ? `${selected.address.street}, ${selected.address.number}`
               : "Retirada na loja"}
           </p>
-          {selected.address && <p>
-            {selected.address.neighborhood} • {selected.address.city}/{selected.address.state}<br />
-            {selected.address.complement} {selected.address.reference}
-          </p>}
+          {selected.address && (
+            <p>
+              {selected.address.neighborhood} • {selected.address.city}/
+              {selected.address.state}
+              <br />
+              {selected.address.complement} {selected.address.reference}
+            </p>
+          )}
           <h3>Itens</h3>
           {selected.items.length ? (
             selected.items.map((item) => (
               <p key={item.id}>
                 {item.quantity}× {item.productName}{" "}
                 <strong>{money(item.total)}</strong>
-                {item.selectedOptions.length > 0 && <small><br />{item.selectedOptions.map(option => option.name).join(", ")}</small>}
+                {item.selectedOptions.length > 0 && (
+                  <small>
+                    <br />
+                    {item.selectedOptions
+                      .map((option) => option.name)
+                      .join(", ")}
+                  </small>
+                )}
               </p>
             ))
           ) : (
             <p>Nenhum item registrado.</p>
           )}
-          {selected.notes && <p><strong>Observações:</strong> {selected.notes}</p>}
+          {selected.notes && (
+            <p>
+              <strong>Observações:</strong> {selected.notes}
+            </p>
+          )}
           <div className="drawer-total">
             <span>Total</span>
             <strong>{money(selected.total)}</strong>
@@ -284,12 +312,15 @@ export function AdminView() {
                 ? "Dinheiro"
                 : "Cartão na entrega"}
           </p>
-          {selected.paymentMethod === "CASH" && selected.changeFor != null && <p>Troco para {money(selected.changeFor)}</p>}
+          {selected.paymentMethod === "CASH" && selected.changeFor != null && (
+            <p>Troco para {money(selected.changeFor)}</p>
+          )}
           <h3>Histórico</h3>
           <ul>
             {selected.history.map((entry, index) => (
               <li key={index}>
-                {orderStatusNames[entry.status]} — {new Date(entry.at).toLocaleString("pt-BR")}
+                {orderStatusNames[entry.status]} —{" "}
+                {new Date(entry.at).toLocaleString("pt-BR")}
               </li>
             ))}
           </ul>
