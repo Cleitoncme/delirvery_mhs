@@ -60,7 +60,7 @@ export const getCatalog = cache(
         [tenant.id],
       ),
       query<OptionRow>(
-        "SELECT g.id AS group_id, g.name AS group_name, g.required, g.min_selections, g.max_selections, o.id, o.name, o.additional_price_cents FROM product_option_groups g JOIN product_options o ON o.option_group_id = g.id AND o.tenant_id = g.tenant_id WHERE g.tenant_id = $1 AND o.available ORDER BY g.sort_order, o.sort_order",
+        "SELECT g.id AS group_id, g.name AS group_name, g.required, g.min_selections, g.max_selections, o.id, o.name, o.additional_price_cents FROM product_option_groups g LEFT JOIN product_options o ON o.option_group_id = g.id AND o.tenant_id = g.tenant_id AND o.available AND (o.stock_quantity IS NULL OR o.stock_quantity > 0) WHERE g.tenant_id = $1 ORDER BY g.sort_order, o.sort_order",
         [tenant.id],
       ),
     ]);
@@ -118,11 +118,12 @@ export const getCatalog = cache(
             max: option.max_selections,
             options: [],
           };
-          group.options.push({
-            id: option.id,
-            name: option.name,
-            additionalPrice: option.additional_price_cents,
-          });
+          if (option.id)
+            group.options.push({
+              id: option.id,
+              name: option.name,
+              additionalPrice: option.additional_price_cents,
+            });
           groups.set(option.group_id, group);
         }
         return {
@@ -135,7 +136,13 @@ export const getCatalog = cache(
           price: item.price_cents,
           compareAtPrice: item.compare_at_price_cents ?? undefined,
           unit: item.unit,
-          available: item.available,
+          available:
+            item.available &&
+            [...groups.values()].every(
+              (group) =>
+                group.options.length >=
+                Math.max(group.min, group.required ? 1 : 0),
+            ),
           featured: item.featured,
           illustration: item.illustration ?? "",
           subcategory: item.subcategory,
