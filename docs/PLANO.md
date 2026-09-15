@@ -13,6 +13,7 @@ Branches encadeadas, cada uma baseada na fase anterior:
 7. `etapa/07-api-postgres`: PostgreSQL local via Docker, schema multi-tenant e seed do catálogo demonstrativo.
 8. `etapa/08-api-postgres`: conexão server-side, health check, catálogo público e criação idempotente de pedidos.
 9. `etapa/09-cliente-api`: telas públicas carregadas do PostgreSQL e checkout integrado à criação segura de pedidos.
+10. `etapa/10-painel-api`: login administrativo, sessões por loja, pedidos reais, transições autorizadas com histórico e acompanhamento privado do cliente.
 
 Cada branch preserva um checkpoint. Não fazer merge em develop nem push sem necessidade. Para revisar, comparar cada branch com sua antecessora.
 
@@ -22,12 +23,12 @@ O banco possui schema e dados de demonstração. As páginas server-side carrega
 
 - Dinheiro em centavos inteiros, incluindo complementos. No exemplo original, 12,90 + 28,90 + 2 × 4,99 = 51,78: são quatro unidades e três linhas; distinguir os dois contadores.
 - Categorias, produtos, carrinhos e pedidos devem carregar tenantId; resolução de tenant deve rejeitar slugs desconhecidos.
-- Persistir somente IDs, quantidades e opções do carrinho; nunca cliente, endereço, telefone, token ou valores confiados do navegador.
-- Preços são recalculados no servidor, com estoque, horário, taxas e idempotência. Produção ainda requer autenticação e autorização.
-- Identificar por telefone não autentica. Conta e painel são demonstrações sem identidade verificada. Nenhuma informação real deve ser inserida.
+- No localStorage, persistir somente IDs, quantidades e opções do carrinho; nunca cliente, endereço, telefone ou token. Sessões usam cookies HttpOnly controlados pelo servidor.
+- Preços são recalculados no servidor, com estoque, horário, taxas e idempotência. A publicação exige revisão das proteções descritas em SEGURANCA.md.
+- Identificar por telefone não autentica. A tela de conta do cliente continua demonstrativa. O painel administrativo agora exige credenciais e sessão por loja.
 - PIX é somente uma opção simulada; não gerar cobrança ou indicar pagamento confirmado.
-- Pedidos em memória se perdem ao recarregar. IDs aleatórios não substituem autorização.
-- Admin em produção fica desabilitado por padrão; habilitação explícita serve apenas para demonstrar dados fictícios. Antes de dados reais: autenticação, RBAC e isolamento server-side obrigatórios.
+- Pedidos e histórico ficam no PostgreSQL. O acompanhamento exige cookie HttpOnly por pedido, com validade de sete dias; conhecer o UUID não autoriza a leitura.
+- Admin fica desabilitado por padrão. A habilitação exige configuração, criação explícita de usuário e login; permissões e tenant são conferidos no servidor.
 - A paleta é fornecida, mas nenhum arquivo de logo/layout aprovado foi anexado. Usar marca tipográfica provisória e ilustrações locais simples.
 
 ## Validação

@@ -20,4 +20,7 @@ test("checkout valida dados e cria pedido pela API", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("button", { name: "Confirmar pedido" }).click();
   await expect(page).toHaveURL(/\/pedido\/[0-9a-f-]+\/sucesso$/);
+  await expect(page.getByRole("heading", { name: /Pedido realizado/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /Pedido realizado/ })).toBeVisible();
 });

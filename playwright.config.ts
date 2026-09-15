@@ -1,4 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync } from "node:fs";
+if (existsSync(".env")) process.loadEnvFile(".env");
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -13,7 +15,8 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
+    env: { ADMIN_ENABLED: "true", APP_ORIGIN: "http://127.0.0.1:3000" },
     timeout: 120000,
   },
 });
