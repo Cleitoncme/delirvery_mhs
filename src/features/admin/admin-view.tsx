@@ -53,11 +53,13 @@ const names = [
 export function AdminView() {
   const router = useRouter();
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<DeliveryOrderStatus | "">("");
   const { data, error, refresh } = useApiResource<{
     orders: Order[];
     hasMore: boolean;
     role: string;
-  }>(`/api/admin/pedidos?page=${page}`);
+  }>(`/api/admin/pedidos?page=${page}&status=${encodeURIComponent(statusFilter)}&search=${encodeURIComponent(query)}`);
   const orders = data?.orders ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = orders.find((order) => order.id === selectedId);
@@ -91,7 +93,6 @@ export function AdminView() {
       refresh();
     }
   }
-  const [query, setQuery] = useState("");
   const visible = orders.filter((o) =>
     `${o.number} ${o.customer.name}`
       .toLowerCase()
@@ -175,6 +176,13 @@ export function AdminView() {
         )}
         {!data && !error && <p role="status">Carregando pedidos…</p>}
         <button onClick={refresh}>Atualizar pedidos</button>
+        <label className="admin-search">
+          Status
+          <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as DeliveryOrderStatus | ""); setPage(0); }}>
+            <option value="">Todos</option>
+            {columns.map((column) => <option value={column.status} key={column.status}>{column.label}</option>)}
+          </select>
+        </label>
         {data && orders.length === 0 && <p>Nenhum pedido nesta página.</p>}
         <label className="admin-search">
           <Search size={18} />
@@ -340,6 +348,20 @@ export function AdminView() {
                     : "Concluir pedido"}
               <ArrowRight size={17} />
             </button>
+          )}
+          {data?.role === "OPERATOR" && ["NEW", "PREPARING", "READY"].includes(selected.status) && (
+            <button className="secondary-button wide" disabled={busy} onClick={async () => {
+              const reason = window.prompt("Informe o motivo do cancelamento:");
+              if (!reason?.trim()) return;
+              setBusy(true); setActionError("");
+              try {
+                const response = await fetch(`/api/admin/pedidos/${selected.id}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error ?? "Falha ao cancelar o pedido.");
+                setSelectedId(null);
+              } catch (cause) { setActionError(cause instanceof Error ? cause.message : "Falha de conexão."); }
+              finally { setBusy(false); refresh(); }
+            }}>Cancelar pedido</button>
           )}
         </aside>
       )}

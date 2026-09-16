@@ -14,6 +14,8 @@ Branches encadeadas, cada uma baseada na fase anterior:
 8. `etapa/08-api-postgres`: conexão server-side, health check, catálogo público e criação idempotente de pedidos.
 9. `etapa/09-cliente-api`: telas públicas carregadas do PostgreSQL e checkout integrado à criação segura de pedidos.
 10. `etapa/10-painel-api`: login administrativo, sessões por loja, pedidos reais, transições autorizadas com histórico e acompanhamento privado do cliente.
+11. `etapa/11-catalogo-admin`: cadastro e edição de categorias, produtos e complementos com controle de versão.
+12. `etapa/12-operacao-pedidos`: filtros operacionais, cancelamento com motivo, reposição de estoque e auditoria.
 
 Cada branch preserva um checkpoint. Não fazer merge em develop nem push sem necessidade. Para revisar, comparar cada branch com sua antecessora.
 
