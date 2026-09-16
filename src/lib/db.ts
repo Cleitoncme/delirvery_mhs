@@ -21,11 +21,16 @@ export const db =
 
 if (process.env.NODE_ENV !== "production") global.deliveryMhsPool = db;
 
-export async function query<T extends QueryResultRow>(text: string, values?: unknown[]) {
+export async function query<T extends QueryResultRow>(
+  text: string,
+  values?: unknown[],
+) {
   return db.query<T>(text, values);
 }
 
-export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>) {
+export async function withTransaction<T>(
+  callback: (client: PoolClient) => Promise<T>,
+) {
   const client = await db.connect();
   try {
     await client.query("BEGIN");

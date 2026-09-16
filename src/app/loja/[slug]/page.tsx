@@ -9,5 +9,11 @@ export default async function StorePage({
   const { slug } = await params;
   const catalog = await getCatalog(slug);
   if (!catalog) notFound();
-  return <CatalogView tenant={catalog.tenant} categories={catalog.categories} products={catalog.products} />;
+  return (
+    <CatalogView
+      tenant={catalog.tenant}
+      categories={catalog.categories}
+      products={catalog.products}
+    />
+  );
 }

@@ -9,3 +9,8 @@ test-results/
 !.env.example
 *.log
 .tsconfig.tsbuildinfo
+nestjs_coding.SKILL.md
+nestjs_coding
+nestjs_documentation.SKILL.md
+typescript.SKILL.md
+

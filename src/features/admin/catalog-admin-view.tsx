@@ -197,7 +197,9 @@ function CatalogEditor({
   onCancel: () => void;
   onSaved: () => void;
 }) {
-  const [values, setValues] = useState<Record<string, string | boolean | number>>(() =>
+  const [values, setValues] = useState<
+    Record<string, string | boolean | number>
+  >(() =>
     Object.fromEntries(
       fields[resource].map((field) => {
         const value = record?.[field.key];
