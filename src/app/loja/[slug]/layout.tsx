@@ -11,5 +11,9 @@ export default async function StoreLayout({
   const { slug } = await params;
   const catalog = await getCatalog(slug);
   if (!catalog) notFound();
-  return <StoreShell tenant={catalog.tenant} catalog={catalog}>{children}</StoreShell>;
+  return (
+    <StoreShell tenant={catalog.tenant} catalog={catalog}>
+      {children}
+    </StoreShell>
+  );
 }

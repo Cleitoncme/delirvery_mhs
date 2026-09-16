@@ -10,7 +10,10 @@ import {
 import { useApiResource } from "@/lib/use-api-resource";
 import { money } from "@/lib/format";
 import type { DeliveryOrderStatus, Tenant, Order } from "@/types/domain";
-type TrackedOrder = Omit<Order, "customer" | "tenantId" | "address" | "notes" | "changeFor">;
+type TrackedOrder = Omit<
+  Order,
+  "customer" | "tenantId" | "address" | "notes" | "changeFor"
+>;
 
 const statusNames: Record<DeliveryOrderStatus, string> = {
   NEW: "Pedido recebido",
@@ -28,7 +31,9 @@ const flow: DeliveryOrderStatus[] = [
   "COMPLETED",
 ];
 export function OrderSuccess({ tenant, id }: { tenant: Tenant; id: string }) {
-  const { data: order, error } = useApiResource<TrackedOrder>(`/api/v1/lojas/${tenant.slug}/pedidos/${id}`);
+  const { data: order, error } = useApiResource<TrackedOrder>(
+    `/api/v1/lojas/${tenant.slug}/pedidos/${id}`,
+  );
   if (error) return <Missing tenant={tenant} message={error} />;
   if (!order) return <p role="status">Carregando pedido…</p>;
   return (
@@ -44,7 +49,11 @@ export function OrderSuccess({ tenant, id }: { tenant: Tenant; id: string }) {
         Seu pedido <strong>#{order.number}</strong> foi recebido. Este é um
         pedido demonstrativo.
       </p>
-      <OrderTimeline status={order.status} history={order.history} fulfillment={order.fulfillmentType} />
+      <OrderTimeline
+        status={order.status}
+        history={order.history}
+        fulfillment={order.fulfillmentType}
+      />
       <Link className="button wide" href={`/loja/${tenant.slug}/pedido/${id}`}>
         Acompanhar pedido
       </Link>
@@ -55,7 +64,9 @@ export function OrderSuccess({ tenant, id }: { tenant: Tenant; id: string }) {
   );
 }
 export function OrderTracking({ tenant, id }: { tenant: Tenant; id: string }) {
-  const { data: order, error } = useApiResource<TrackedOrder>(`/api/v1/lojas/${tenant.slug}/pedidos/${id}`);
+  const { data: order, error } = useApiResource<TrackedOrder>(
+    `/api/v1/lojas/${tenant.slug}/pedidos/${id}`,
+  );
   if (error) return <Missing tenant={tenant} message={error} />;
   if (!order) return <p role="status">Carregando pedido…</p>;
   return (
@@ -65,7 +76,12 @@ export function OrderTracking({ tenant, id }: { tenant: Tenant; id: string }) {
           <span className="eyebrow">ACOMPANHAMENTO</span>
           <h1>Pedido #{order.number}</h1>
         </div>
-        <span className="badge" role="status">● {order.status === "COMPLETED" && order.fulfillmentType === "PICKUP" ? "Retirado" : statusNames[order.status]}</span>
+        <span className="badge" role="status">
+          ●{" "}
+          {order.status === "COMPLETED" && order.fulfillmentType === "PICKUP"
+            ? "Retirado"
+            : statusNames[order.status]}
+        </span>
       </div>
       <div className="checkout-grid">
         <section className="panel">
@@ -75,7 +91,9 @@ export function OrderTracking({ tenant, id }: { tenant: Tenant; id: string }) {
               <strong>
                 {order.status === "COMPLETED"
                   ? "Pedido concluído"
-                  : order.status === "CANCELED" ? "Pedido cancelado" : "Previsão de atendimento"}
+                  : order.status === "CANCELED"
+                    ? "Pedido cancelado"
+                    : "Previsão de atendimento"}
               </strong>
               <p>
                 {order.fulfillmentType === "PICKUP"
@@ -84,14 +102,20 @@ export function OrderTracking({ tenant, id }: { tenant: Tenant; id: string }) {
               </p>
             </div>
           </div>
-          <OrderTimeline status={order.status} history={order.history} fulfillment={order.fulfillmentType} />
+          <OrderTimeline
+            status={order.status}
+            history={order.history}
+            fulfillment={order.fulfillmentType}
+          />
           <p>O status é atualizado automaticamente a cada 10 segundos.</p>
         </section>
         <section className="panel">
           <h2>Resumo</h2>
           <p>
             <MapPin size={15} />{" "}
-            {order.fulfillmentType === "DELIVERY" ? "Entrega no endereço informado" : "Retirada na loja"}
+            {order.fulfillmentType === "DELIVERY"
+              ? "Entrega no endereço informado"
+              : "Retirada na loja"}
           </p>
           <p>
             {order.items.length
@@ -113,7 +137,9 @@ export function OrderTimeline({
   history: { status: DeliveryOrderStatus; at: string }[];
   fulfillment?: Order["fulfillmentType"];
 }) {
-  const steps = flow.filter(item => fulfillment !== "PICKUP" || item !== "OUT_FOR_DELIVERY");
+  const steps = flow.filter(
+    (item) => fulfillment !== "PICKUP" || item !== "OUT_FOR_DELIVERY",
+  );
   const current = steps.indexOf(status);
   if (status === "CANCELED") return <p role="status">Pedido cancelado.</p>;
   return (
@@ -125,7 +151,11 @@ export function OrderTimeline({
           <li key={item} className={done ? "done" : ""}>
             {done ? <CheckCircle2 size={20} /> : <Circle size={20} />}
             <div>
-              <strong>{item === "COMPLETED" && fulfillment === "PICKUP" ? "Retirado" : statusNames[item]}</strong>
+              <strong>
+                {item === "COMPLETED" && fulfillment === "PICKUP"
+                  ? "Retirado"
+                  : statusNames[item]}
+              </strong>
               {entry && (
                 <small>
                   {new Intl.DateTimeFormat("pt-BR", {
@@ -147,7 +177,10 @@ function Missing({ tenant, message }: { tenant: Tenant; message: string }) {
       <PackageCheck size={52} />
       <h1>Não foi possível abrir o pedido</h1>
       <p role="alert">{message}</p>
-      <p>Use o navegador em que o pedido foi realizado. O acesso de acompanhamento dura sete dias.</p>
+      <p>
+        Use o navegador em que o pedido foi realizado. O acesso de
+        acompanhamento dura sete dias.
+      </p>
       <Link className="button" href={`/loja/${tenant.slug}`}>
         Voltar para a loja
       </Link>

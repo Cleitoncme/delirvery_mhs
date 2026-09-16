@@ -1,2 +1,4 @@
 import { redirect } from "next/navigation";
-export default function AdminReportsPage(){redirect("/admin");}
+export default function AdminReportsPage() {
+  redirect("/admin");
+}

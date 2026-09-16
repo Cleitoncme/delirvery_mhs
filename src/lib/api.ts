@@ -56,5 +56,7 @@ export async function jsonRequest(request: Request) {
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new ApiError(400, "JSON inválido.");
-  } finally { reader.releaseLock(); }
+  } finally {
+    reader.releaseLock();
+  }
 }

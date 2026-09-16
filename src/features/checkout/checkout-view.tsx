@@ -140,21 +140,28 @@ export function CheckoutView({ tenant }: { tenant: Tenant }) {
           }),
         },
       );
-      const result = (await response.json().catch(() => null)) as
-        | { id?: string; number?: string; total?: number; error?: string }
-        | null;
+      const result = (await response.json().catch(() => null)) as {
+        id?: string;
+        number?: string;
+        total?: number;
+        error?: string;
+      } | null;
       if (
         !response.ok ||
         !result?.id ||
         !result.number ||
         typeof result.total !== "number"
       )
-        throw new Error(result?.error ?? "Não foi possível registrar o pedido.");
+        throw new Error(
+          result?.error ?? "Não foi possível registrar o pedido.",
+        );
       clear(tenant.id);
       router.push(`/loja/${tenant.slug}/pedido/${result.id}/sucesso`);
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "Não foi possível registrar o pedido.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível registrar o pedido.",
       );
     } finally {
       setSubmitting(false);

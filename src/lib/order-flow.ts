@@ -1,8 +1,12 @@
 import type { DeliveryOrderStatus, FulfillmentType } from "@/types/domain";
 
 export const orderStatusNames: Record<DeliveryOrderStatus, string> = {
-  NEW: "Pedido recebido", PREPARING: "Em separação", READY: "Pronto",
-  OUT_FOR_DELIVERY: "Saiu para entrega", COMPLETED: "Concluído", CANCELED: "Cancelado",
+  NEW: "Pedido recebido",
+  PREPARING: "Em separação",
+  READY: "Pronto",
+  OUT_FOR_DELIVERY: "Saiu para entrega",
+  COMPLETED: "Concluído",
+  CANCELED: "Cancelado",
 };
 
 export function nextOrderStatus(
