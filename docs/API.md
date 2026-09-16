@@ -37,7 +37,11 @@ A resposta de criação também emite um cookie HttpOnly para acompanhar aquele 
 - `DELETE /api/admin/session`: revoga sessão e remove cookie. Exige Origin.
 - `GET /api/admin/pedidos?page=0`: até 50 pedidos da loja da sessão, ordenados do mais recente, com `hasMore` e `role`. Sem sessão: 401. Painel desabilitado: 503.
 - `PATCH /api/admin/pedidos/[orderId]/status`: JSON `{ "expectedStatus": "NEW", "status": "PREPARING" }`. Exige sessão OPERATOR e Origin. Perfil VIEWER: 403; pedido de outra loja: 404; estado desatualizado ou transição inválida: 409.
+- `GET /api/admin/pedidos?page=0&status=PREPARING&search=joao`: filtra por status e pesquisa por número, nome ou telefone. A busca continua limitada à loja da sessão e retorna no máximo 50 por página.
+- `POST /api/admin/pedidos/[orderId]/cancel`: JSON `{ "reason": "Cliente solicitou cancelamento" }`. Exige sessão OPERATOR e Origin. Só permite pedidos `NEW`, `PREPARING` ou `READY`; devolve estoque controlado de produtos e complementos, grava motivo no histórico e cria evento de integração.
 
 Entrega: NEW → PREPARING → READY → OUT_FOR_DELIVERY → COMPLETED. Retirada: NEW → PREPARING → READY → COMPLETED. Estados terminais não permitem avanço. Eventos ORDER_STATUS_CHANGED ficam na outbox; envio a integrações depende de um worker futuro.
+
+Cancelamento: NEW/PREPARING/READY → CANCELED. Não há cancelamento após saída para entrega ou conclusão. A operação é atômica e não pode ser repetida.
 
 Todas as entradas JSON são limitadas a 64 KiB durante a leitura, mesmo sem Content-Length. Veja [ADMIN_LOCAL.md](ADMIN_LOCAL.md) para configurar o primeiro acesso.

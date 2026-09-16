@@ -296,6 +296,12 @@ export async function createOrder(
             option.additional_price_cents,
           ],
         );
+      for (const option of row.selected)
+        if (option.stock_quantity !== null)
+          await client.query(
+            "UPDATE product_options SET stock_quantity = stock_quantity - $1 WHERE id = $2 AND tenant_id = $3",
+            [row.quantity, option.id, tenant.id],
+          );
       if (row.product.stock_quantity !== null)
         await client.query(
           "UPDATE products SET stock_quantity = stock_quantity - $1, updated_at = now() WHERE id = $2 AND tenant_id = $3",
