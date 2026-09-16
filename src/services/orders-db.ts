@@ -3,6 +3,7 @@ import type { PoolClient, QueryResultRow } from "pg";
 import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { withTransaction } from "@/lib/db";
+import { distanceMeters, geocodeAddress } from "@/services/geolocation";
 
 const uuid = z.string().uuid();
 export const createOrderSchema = z
@@ -83,10 +84,13 @@ export async function createOrder(
     const tenant = await one<{
       id: string;
       delivery_fee_cents: number;
+      minimum_order_cents: number;
+      latitude: number | null;
+      longitude: number | null;
       is_open: boolean;
     }>(
       client,
-      "SELECT id, delivery_fee_cents, is_open FROM tenants WHERE slug = $1 FOR SHARE",
+      "SELECT id, delivery_fee_cents, minimum_order_cents, latitude, longitude, is_open FROM tenants WHERE slug = $1 FOR SHARE",
       [slug],
       "Loja não encontrada.",
       404,
@@ -241,8 +245,21 @@ export async function createOrder(
       )
     ).rows[0].number;
     const subtotal = rows.reduce((sum, row) => sum + row.total, 0);
-    const deliveryFee =
-      input.fulfillment === "DELIVERY" ? tenant.delivery_fee_cents : 0;
+    let deliveryFee = 0;
+    if (input.fulfillment === "DELIVERY") {
+      if (subtotal < tenant.minimum_order_cents)
+        throw new ApiError(409, `Pedido mínimo para entrega: R$ ${(tenant.minimum_order_cents / 100).toFixed(2).replace('.', ',')}.`);
+      if (tenant.latitude === null || tenant.longitude === null)
+        throw new ApiError(503, "A loja ainda não configurou sua localização.");
+      const destination = await geocodeAddress(input.address!);
+      const distance = distanceMeters({ latitude: Number(tenant.latitude), longitude: Number(tenant.longitude) }, destination);
+      const zone = (await client.query<{ fee_cents: number }>(
+        "SELECT fee_cents FROM delivery_zones WHERE tenant_id = $1 AND active AND ((min_distance_m = 0 AND $2 >= min_distance_m) OR $2 > min_distance_m) AND $2 <= max_distance_m ORDER BY sort_order, min_distance_m LIMIT 1",
+        [tenant.id, distance],
+      )).rows[0];
+      if (!zone) throw new ApiError(409, "Este endereço está fora da área de entrega.");
+      deliveryFee = zone.fee_cents;
+    }
     const total = subtotal + deliveryFee;
     if (
       input.payment === "CASH" &&
