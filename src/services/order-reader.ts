@@ -27,12 +27,23 @@ const orderSelect = `SELECT jsonb_build_object(
 ) AS data FROM orders o JOIN customers c ON c.id=o.customer_id AND c.tenant_id=o.tenant_id
 LEFT JOIN addresses a ON a.id=o.address_id AND a.tenant_id=o.tenant_id`;
 
-export async function listAdminOrders(page: number, filters?: { status?: DeliveryOrderStatus; search?: string }) {
+export async function listAdminOrders(
+  page: number,
+  filters?: { status?: DeliveryOrderStatus; search?: string },
+) {
   const session = await requireAdmin();
   const values: unknown[] = [session.tenantId];
   const clauses = ["o.tenant_id=$1"];
-  if (filters?.status) { values.push(filters.status); clauses.push(`o.status=$${values.length}`); }
-  if (filters?.search) { values.push(`%${filters.search}%`); clauses.push(`(o.number::text ILIKE $${values.length} OR c.name ILIKE $${values.length} OR c.phone ILIKE $${values.length})`); }
+  if (filters?.status) {
+    values.push(filters.status);
+    clauses.push(`o.status=$${values.length}`);
+  }
+  if (filters?.search) {
+    values.push(`%${filters.search}%`);
+    clauses.push(
+      `(o.number::text ILIKE $${values.length} OR c.name ILIKE $${values.length} OR c.phone ILIKE $${values.length})`,
+    );
+  }
   const offsetIndex = values.length + 1;
   values.push(page * 50, 51);
   const result = await query<{ data: Order }>(
@@ -97,17 +108,52 @@ export async function advanceOrder(
 export async function cancelOrder(id: string, reason: string) {
   const session = await requireAdmin(true);
   return withTransaction(async (client) => {
-    const result = await client.query<{ status: DeliveryOrderStatus }>("SELECT status FROM orders WHERE id=$1 AND tenant_id=$2 FOR UPDATE", [id, session.tenantId]);
+    const result = await client.query<{ status: DeliveryOrderStatus }>(
+      "SELECT status FROM orders WHERE id=$1 AND tenant_id=$2 FOR UPDATE",
+      [id, session.tenantId],
+    );
     const order = result.rows[0];
     if (!order) throw new ApiError(404, "Pedido não encontrado.");
-    if (!canCancelOrder(order.status)) throw new ApiError(409, "Este pedido não pode mais ser cancelado.");
-    const items = await client.query<{ product_id: string; quantity: number }>("SELECT product_id,quantity FROM order_items WHERE order_id=$1 AND tenant_id=$2", [id, session.tenantId]);
-    for (const item of items.rows) await client.query("UPDATE products SET stock_quantity=stock_quantity+$1,updated_at=now() WHERE id=$2 AND tenant_id=$3 AND stock_quantity IS NOT NULL", [item.quantity,item.product_id,session.tenantId]);
-    const options = await client.query<{ product_option_id: string; quantity: number }>("SELECT x.product_option_id,i.quantity FROM order_item_options x JOIN order_items i ON i.id=x.order_item_id AND i.tenant_id=x.tenant_id WHERE i.order_id=$1 AND x.tenant_id=$2", [id,session.tenantId]);
-    for (const option of options.rows) await client.query("UPDATE product_options SET stock_quantity=stock_quantity+$1 WHERE id=$2 AND tenant_id=$3 AND stock_quantity IS NOT NULL", [option.quantity,option.product_option_id,session.tenantId]);
-    await client.query("UPDATE orders SET status='CANCELED',updated_at=now() WHERE id=$1 AND tenant_id=$2", [id,session.tenantId]);
-    await client.query("INSERT INTO order_status_history(tenant_id,order_id,status,actor_type,actor_id,reason) VALUES($1,$2,'CANCELED','ADMIN',$3,$4)", [session.tenantId,id,session.userId,reason]);
-    await client.query("INSERT INTO integration_events(tenant_id,aggregate_type,aggregate_id,event_type,payload,idempotency_key) VALUES($1,'ORDER',$2,'ORDER_CANCELED',$3,$4)", [session.tenantId,id,JSON.stringify({ orderId:id, reason, actorId:session.userId }),randomUUID()]);
+    if (!canCancelOrder(order.status))
+      throw new ApiError(409, "Este pedido não pode mais ser cancelado.");
+    const items = await client.query<{ product_id: string; quantity: number }>(
+      "SELECT product_id,quantity FROM order_items WHERE order_id=$1 AND tenant_id=$2",
+      [id, session.tenantId],
+    );
+    for (const item of items.rows)
+      await client.query(
+        "UPDATE products SET stock_quantity=stock_quantity+$1,updated_at=now() WHERE id=$2 AND tenant_id=$3 AND stock_quantity IS NOT NULL",
+        [item.quantity, item.product_id, session.tenantId],
+      );
+    const options = await client.query<{
+      product_option_id: string;
+      quantity: number;
+    }>(
+      "SELECT x.product_option_id,i.quantity FROM order_item_options x JOIN order_items i ON i.id=x.order_item_id AND i.tenant_id=x.tenant_id WHERE i.order_id=$1 AND x.tenant_id=$2",
+      [id, session.tenantId],
+    );
+    for (const option of options.rows)
+      await client.query(
+        "UPDATE product_options SET stock_quantity=stock_quantity+$1 WHERE id=$2 AND tenant_id=$3 AND stock_quantity IS NOT NULL",
+        [option.quantity, option.product_option_id, session.tenantId],
+      );
+    await client.query(
+      "UPDATE orders SET status='CANCELED',updated_at=now() WHERE id=$1 AND tenant_id=$2",
+      [id, session.tenantId],
+    );
+    await client.query(
+      "INSERT INTO order_status_history(tenant_id,order_id,status,actor_type,actor_id,reason) VALUES($1,$2,'CANCELED','ADMIN',$3,$4)",
+      [session.tenantId, id, session.userId, reason],
+    );
+    await client.query(
+      "INSERT INTO integration_events(tenant_id,aggregate_type,aggregate_id,event_type,payload,idempotency_key) VALUES($1,'ORDER',$2,'ORDER_CANCELED',$3,$4)",
+      [
+        session.tenantId,
+        id,
+        JSON.stringify({ orderId: id, reason, actorId: session.userId }),
+        randomUUID(),
+      ],
+    );
     return { id, status: "CANCELED" as const };
   });
 }
