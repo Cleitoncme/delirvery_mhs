@@ -57,4 +57,10 @@ p { color:var(--muted); }
 .catalog-records p { margin:4px 0; }
 .admin-main nav[aria-label="Páginas de pedidos"] { display:flex; align-items:center; gap:12px; margin-top:20px; }
 @media(max-width:767px) { .kanban { grid-template-columns:repeat(6,220px); } }
+.admin-main { min-height:100vh; overflow:hidden; }
+.kanban { max-height:calc(100vh - 290px); align-items:stretch; }
+.kanban-column { min-height:0; max-height:calc(100vh - 310px); overflow-y:auto; }
+.order-drawer { top:50%; right:auto; left:50%; transform:translate(-50%,-50%); width:min(560px,calc(100vw - 32px)); height:min(760px,calc(100vh - 48px)); border-radius:16px; box-shadow:0 20px 60px #0005; }
+.order-drawer:before { content:""; position:fixed; z-index:-1; inset:50% auto auto 50%; width:100vw; height:100vh; transform:translate(-50%,-50%); background:#0007; }
+@media(max-width:767px) { .kanban { max-height:calc(100vh - 250px); }.kanban-column { max-height:calc(100vh - 270px); }.order-drawer { height:calc(100vh - 24px); width:calc(100vw - 24px); } }
 
