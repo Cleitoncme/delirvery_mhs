@@ -65,6 +65,8 @@ export function AdminView() {
   const selected = orders.find((order) => order.id === selectedId);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropStatus, setDropStatus] = useState<DeliveryOrderStatus | null>(null);
   const nextStatus =
     selected && nextOrderStatus(selected.status, selected.fulfillmentType);
   async function transition() {
@@ -92,6 +94,18 @@ export function AdminView() {
       setBusy(false);
       refresh();
     }
+  }
+  async function dropOrder(status: DeliveryOrderStatus) {
+    const order = orders.find((item) => item.id === draggedId);
+    setDraggedId(null); setDropStatus(null);
+    if (!order || order.status === "NEW" || order.status === "CANCELED" || data?.role !== "OPERATOR") return;
+    const current = columns.findIndex((column) => column.status === order.status);
+    const target = columns.findIndex((column) => column.status === status);
+    if (target !== current + 1) return;
+    setBusy(true); setActionError("");
+    try { const response = await fetch(`/api/admin/pedidos/${order.id}/status`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({expectedStatus:order.status,status}) }); const result=await response.json(); if(!response.ok) throw new Error(result.error ?? "Falha ao mover pedido."); }
+    catch (cause) { setActionError(cause instanceof Error ? cause.message : "Falha de conexão."); }
+    finally { setBusy(false); refresh(); }
   }
   const visible = orders.filter((o) =>
     `${o.number} ${o.customer.name}`
@@ -197,7 +211,10 @@ export function AdminView() {
           {columns.map((column) => {
             const list = visible.filter((o) => o.status === column.status);
             return (
-              <div className="kanban-column" key={column.status}>
+              <div className="kanban-column" key={column.status}
+                onDragEnter={() => setDropStatus(column.status)}
+                onDragOver={(event) => { if (dropStatus === column.status) event.preventDefault(); }}
+                onDrop={(event) => { event.preventDefault(); void dropOrder(column.status); }}>
                 <h2>
                   {column.label}
                   <span>{list.length}</span>
@@ -205,6 +222,9 @@ export function AdminView() {
                 {list.map((order) => (
                   <button
                     className="order-card"
+                    draggable={order.status !== "NEW" && order.status !== "CANCELED" && data?.role === "OPERATOR"}
+                    onDragStart={() => setDraggedId(order.id)}
+                    onDragEnd={() => { setDraggedId(null); setDropStatus(null); }}
                     key={order.id}
                     onClick={() => {
                       setSelectedId(order.id);
